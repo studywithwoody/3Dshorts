@@ -2,7 +2,10 @@
 
 用程式做直式 3D 短片的引擎。沒有 AI 影片模型：每一幀都由 three.js 在無頭 Chrome 裡畫出來，時間軸完全由腳本決定，同一份腳本會得到同一組畫面。
 
-這版附一支 10 秒示範：四隻 [Kenney Cube Pets](https://kenney.nl/assets/cube-pets)（狗、貓、小雞、豬）在草地上玩球、輪流叫，鏡頭大約每 1 秒切一次。
+這版附兩支示範：
+
+- **Cube Pets**（10 秒）：四隻 [Kenney Cube Pets](https://kenney.nl/assets/cube-pets)（狗、貓、小雞、豬）在草地上玩球、輪流叫，鏡頭大約每 1 秒切一次。
+- **凌晨的 AI 助教**（30 秒）：滑板少年在凌晨一點的書房對著數學作業，傳訊息、搜尋、把題目交給 AI 助教，最後自己解出來。角色與家具都是 Kenney 的低多邊形 CC0 素材，對白是免費的 Edge TTS 繁體中文語音。
 
 ## 流程
 
@@ -19,6 +22,14 @@ npm run render -- scripts/cube-pets-demo.json
 ```
 
 成品在 `out/cube-pets-demo.mp4`。倉庫裡已提交同一支片：`examples/cube-pets-demo.mp4`（1080×1920、30fps、正好 10 秒，整合響度 -14.0 LUFS，真峰值約 -3.7 dBFS）。
+
+助教片：
+
+```bash
+npm run render -- scripts/ai-tutor-ad.json
+```
+
+成品在 `out/ai-tutor-ad.mp4`，已提交的版本在 `examples/ai-tutor-ad.mp4`。`npm test` 會同時檢查兩支腳本（助教片讀的是已提交的語音快取，不會打網路）。
 
 ## 環境
 
@@ -39,9 +50,10 @@ npm run render -- scripts/cube-pets-demo.json
 | `src/playback.mjs` | `pose = f(腳本, t)`，渲染與測試共用 |
 | `src/audio.mjs` | 擬聲合成、配樂、混音、WAV |
 | `src/stage/` | three.js 舞台（只負責把 pose 畫出來） |
-| `assets/models/` | Cube Pets GLB 與共用 `Textures/colormap.png` |
-| `assets/fonts/` | 字幕用的 Nunito |
+| `assets/models/` | Cube Pets GLB、主角 FBX、Furniture Kit GLB |
+| `assets/fonts/` | 字幕用的 Nunito 與 Noto Sans TC |
 | `assets/licenses/` | 素材授權全文 |
+| `cache/tts/` | Edge TTS 的 mp3 與逐詞時間戳，重跑不必再連線 |
 | `out/` | 渲染輸出（不進 git） |
 | `examples/` | 已渲染的示範 MP4 |
 
@@ -98,16 +110,60 @@ npm run render -- scripts/cube-pets-demo.json --preview 0.5,1.3,4.7
 
 畫面格式預設 jpeg（給 ffmpeg）。要無損序列可加 `--format png`。
 
+## 凌晨的 AI 助教
+
+腳本是 `scripts/ai-tutor-ad.json`。`scene` 設成 `study` 之後，引擎會改走語音管線：每一句先合成語音，再用實際長度排鏡頭，而不是用腳本裡的 `beat` 當台詞長度。`beat` 是這一幕的目標秒數；語音比較短時，剩下的時間變成停頓，最後再把整片縮放到 `duration`（這裡是 30 秒）。
+
+### 語音
+
+預設供應者是 Microsoft Edge 的線上語音，不需要 API 金鑰。本機要有 `python3` 和 `edge-tts`（`pip install --user edge-tts`）。腳本裡的聲音：
+
+| 角色 | 聲音 |
+| --- | --- |
+| 學生 | `zh-TW-YunJheNeural` |
+| AI 助教 | `zh-TW-HsiaoChenNeural` |
+| 旁白 | `zh-TW-HsiaoYuNeural` |
+
+`tts.provider` 可以換成 `elevenlabs`。`src/tts/elevenlabs.mjs` 目前是同一個回傳格式的佔位：沒有 `ELEVENLABS_API_KEY` 會直接失敗，有金鑰也還沒接上 HTTP。接上之後只要回傳 `{ audio, sampleRate, words, sentences }`，嘴型與字幕會沿用同一套逐詞時間。
+
+Edge 偶爾會對某一句回 `NoAudioReceived`。合成器會換幾個語速再試，成功的 mp3 與逐詞 JSON 寫進 `cache/tts/`，檔名是 `provider + voice + rate + text` 的雜湊。這些快取已提交，沒有網路也能重渲。
+
+字幕用 Noto Sans TC（字重 700 的子集），畫在 WebGL 截圖之上，所以中文不會變成豆腐。
+
+### 換掉結尾 logo
+
+品牌只寫在腳本的 `brand`，舞台跟字幕都讀這裡：
+
+```json
+"brand": {
+  "name": "AI 學習平台",
+  "icon": "spark",
+  "color": "#F6C453"
+}
+```
+
+改 `name` 就是畫面上的字。`icon` 目前只認 `spark`（一顆四角星）。`color` 是圖示的填色。改完重新渲染即可，不用改程式。
+
+### 畫面裡的字
+
+手機、考卷、搜尋頁、AI 面板上的繁體中文都在 `src/screen-copy.mjs`。這些是 CanvasTexture，會進 WebGL 截圖；HTML 疊層不會被拍到。
+
 ## 授權
 
-- **模型**：Kenney《Cube Pets》2.0，[CC0](https://creativecommons.org/publicdomain/zero/1.0/)。原文在 `assets/licenses/Kenney-Cube-Pets-CC0.txt`。感謝 [Kenney](https://kenney.nl)。
-- **字幕字型**：Nunito，SIL Open Font License。全文在 `assets/licenses/Nunito-OFL.txt`。
-- **聲音與配樂**：這個專案自己合成的，沒有取用第三方錄音，可隨專案使用。
+- **Cube Pets**：Kenney《Cube Pets》2.0，[CC0](https://creativecommons.org/publicdomain/zero/1.0/)。原文在 `assets/licenses/Kenney-Cube-Pets-CC0.txt`。
+- **主角**：Kenney《Animated Characters: Protagonists》，CC0。用到的是 `characterMedium.fbx`、`skaterMaleA.png`，以及 `idle`、`jump`、`run`。原文在 `assets/licenses/Kenney-Animated-Characters-Protagonists-CC0.txt`。
+- **書房**：Kenney《Furniture Kit》2.0，CC0。只收了實際用到的 GLB（地板、牆、窗、床、書櫃、書、植物、地毯、書桌、椅子、檯燈、筆電、枕頭、邊桌）。原文在 `assets/licenses/Kenney-Furniture-Kit-CC0.txt`。
+- **字幕字型**：Nunito 與 Noto Sans TC，SIL Open Font License。全文在 `assets/licenses/Nunito-OFL.txt` 與 `assets/licenses/NotoSansTC-OFL.txt`。
+- **聲音與配樂**：寵物片的擬聲、助教片的夜間配樂、訊息提示音與拍桌聲都是這個專案自己合成的，沒有第三方錄音。
+
+感謝 [Kenney](https://kenney.nl)。
 
 ## 限制
 
-- 聲音是風格化合成，不是真實動物錄音，也還沒接 ElevenLabs 或逐字時間戳。同步靠的是整段音效的振幅包絡。
-- 鏡頭是規則切的，不是人工分鏡表。停頓太短會被併進上一鏡，避免閃切。
-- 特寫時其他角色會先讓出畫面（硬切看不出移動），這樣直式構圖才不會互相擋住。
-- 軟體 WebGL 的陰影和抗鋸齒可能和有 GPU 的 Chrome 有細微差別。請固定 Chrome 版本再比較像素。
-- v1 的場景是草地與小球。之後的物理喜劇短劇可以沿用同一套腳本、鏡頭與渲染管線，換成會說話的角色與新布景。
+- Cube Pets 的聲音是風格化合成，不是真實動物錄音。同步靠整段音效的振幅包絡。
+- 助教片的嘴是頭骨上的一塊程序網格，跟著逐詞時間開合，不是骨架的 blendshape。這包角色沒有坐姿，學生是站在書桌前；`run` 片段只有約 0.04 秒，沒有拿來用。
+- 手機與牆上時鐘不是 Furniture Kit 裡的模型：手機是一塊低多邊形方塊，時鐘是畫上去的平面。筆電外殼是家具包的模型，螢幕上的介面是另外貼的 CanvasTexture。
+- 鏡頭是規則切的，不是人工分鏡表。每一鏡大約 0.8–3 秒。
+- Cube Pets 特寫時，其他角色會先讓出畫面（硬切看不出移動），直式構圖才不會互相擋住。
+- 軟體 WebGL（SwiftShader）的陰影和抗鋸齒可能和有 GPU 的 Chrome 有細微差別。請固定 Chrome 版本再比較像素。
+- Edge TTS 服務不穩定，所以倉庫帶著語音快取。ElevenLabs 只留了相同介面，還沒有真正送出請求。

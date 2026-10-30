@@ -11,6 +11,7 @@ const MIN_SHOT = 0.8;
 const WIDE_PAUSE = 0.95;
 
 export function planShots(timeline) {
+  if (timeline.planner === "cycle") return planCycleShots(timeline);
   const shots = [];
 
   if (timeline.intro > 0.02) {
@@ -77,6 +78,75 @@ export function planShots(timeline) {
     shots[shots.length - 1].end = timeline.duration;
   }
 
+  return shots;
+}
+
+function planCycleShots(timeline) {
+  const shots = [];
+  if (timeline.intro > 0.02) {
+    shots.push({
+      start: 0,
+      end: timeline.intro,
+      type: "wide",
+      focus: "room",
+      target: null,
+      secondary: null,
+    });
+  }
+
+  for (const line of timeline.lines) {
+    const pattern =
+      line.shotCycle?.length > 0
+        ? line.shotCycle
+        : [
+            { type: "wide", focus: "room" },
+            { type: "closeup", focus: "student" },
+            { type: "ots", focus: line.focus || "laptop" },
+          ];
+    const start = line.start;
+    const end = line.blockEnd;
+    const len = end - start;
+    let count = pattern.length;
+    while (len / count > 3) count += 1;
+    while (count > 1 && len / count < MIN_SHOT) count -= 1;
+    const piece = len / count;
+    if (piece > 3.001 || piece < MIN_SHOT - 0.02) {
+      throw new Error(
+        `「${line.text || line.speaker}」這一段 ${len.toFixed(2)}s 切不成 0.8–3 秒的鏡頭`,
+      );
+    }
+    let cursor = start;
+    for (let i = 0; i < count; i++) {
+      const spec = pattern[i % pattern.length];
+      const shotEnd = i === count - 1 ? end : start + (len * (i + 1)) / count;
+      const type = typeof spec === "string" ? spec : spec.type;
+      const focus = typeof spec === "string" ? line.focus || null : spec.focus || null;
+      shots.push({
+        start: cursor,
+        end: shotEnd,
+        type,
+        focus,
+        target: line.speaker,
+        secondary: null,
+      });
+      cursor = shotEnd;
+    }
+  }
+
+  const covered = shots.length ? shots[shots.length - 1].end : 0;
+  const tail = timeline.duration - covered;
+  if (tail >= MIN_SHOT - 1e-4) {
+    shots.push({
+      start: covered,
+      end: timeline.duration,
+      type: "wide",
+      focus: "room",
+      target: null,
+      secondary: null,
+    });
+  } else if (tail > 1e-4 && shots.length) {
+    shots[shots.length - 1].end = timeline.duration;
+  }
   return shots;
 }
 

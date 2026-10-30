@@ -1,0 +1,143 @@
+{
+  "id": "ai-tutor-ad",
+  "title": "問題不等人",
+  "scene": "study",
+  "planner": "cycle",
+  "fps": 30,
+  "width": 1080,
+  "height": 1920,
+  "duration": 30,
+  "intro": 0,
+  "music": "night",
+  "tts": {
+    "provider": "edge",
+    "rate": "+0%",
+    "cache": "cache/tts"
+  },
+  "brand": {
+    "name": "AI 學習平台",
+    "icon": "spark",
+    "color": "#F6C453"
+  },
+  "voices": {
+    "student": "zh-TW-YunJheNeural",
+    "tutor": "zh-TW-HsiaoChenNeural",
+    "narrator": "zh-TW-HsiaoYuNeural"
+  },
+  "characters": [
+    {
+      "id": "student",
+      "name": "滑板少年",
+      "model": "assets/models/protagonists/characterMedium.fbx",
+      "skin": "assets/models/protagonists/skaterMaleA.png",
+      "clips": {
+        "idle": "assets/models/protagonists/idle.fbx",
+        "jump": "assets/models/protagonists/jump.fbx",
+        "run": "assets/models/protagonists/run.fbx"
+      },
+      "position": [0.02, 0, 0.72],
+      "rotationY": 3.1416,
+      "voice": "zh-TW-YunJheNeural"
+    }
+  ],
+  "lines": [
+    {
+      "speaker": "student",
+      "text": "這題我已經算半小時了！",
+      "action": "stare",
+      "ui": "homework",
+      "focus": "paper",
+      "beat": 4.0,
+      "shotCycle": [
+        { "type": "wide", "focus": "room" },
+        { "type": "closeup", "focus": "student" },
+        { "type": "ots", "focus": "paper" }
+      ]
+    },
+    {
+      "speaker": "student",
+      "text": "有人會這題嗎？救命！",
+      "action": "phone",
+      "ui": "phone",
+      "focus": "phone",
+      "sfx": "ping",
+      "sfxDelay": 0.02,
+      "sfxGain": 0.55,
+      "beat": 4.0,
+      "shotCycle": [
+        { "type": "closeup", "focus": "student" },
+        { "type": "ots", "focus": "phone" },
+        { "type": "wide", "focus": "room" }
+      ]
+    },
+    {
+      "speaker": "student",
+      "text": "答案有了，但我還是不懂啊！",
+      "action": "search",
+      "ui": "search",
+      "focus": "laptop",
+      "beat": 4.0,
+      "shotCycle": [
+        { "type": "ots", "focus": "laptop" },
+        { "type": "closeup", "focus": "student" },
+        { "type": "wide", "focus": "room" }
+      ]
+    },
+    {
+      "speaker": "student",
+      "text": "不要直接給答案，教我怎麼想。",
+      "action": "upload",
+      "ui": "upload",
+      "focus": "laptop",
+      "beat": 5.0,
+      "shotCycle": [
+        { "type": "wide", "focus": "room" },
+        { "type": "ots", "focus": "laptop" },
+        { "type": "closeup", "focus": "student" },
+        { "type": "ots", "focus": "laptop" }
+      ]
+    },
+    {
+      "speaker": "tutor",
+      "text": "先找出已知條件，再想想適合的公式。",
+      "action": "tutor",
+      "ui": "tutor",
+      "focus": "ai",
+      "beat": 6.0,
+      "shotCycle": [
+        { "type": "ots", "focus": "ai" },
+        { "type": "closeup", "focus": "student" },
+        { "type": "ots", "focus": "laptop" },
+        { "type": "wide", "focus": "room" }
+      ]
+    },
+    {
+      "speaker": "student",
+      "text": "我會了！！",
+      "action": "solve",
+      "ui": "solved",
+      "focus": "student",
+      "sfx": "slam",
+      "sfxDelay": 0.28,
+      "sfxGain": 0.85,
+      "beat": 4.0,
+      "shotCycle": [
+        { "type": "closeup", "focus": "student" },
+        { "type": "wide", "focus": "room" },
+        { "type": "ots", "focus": "paper" }
+      ]
+    },
+    {
+      "speaker": "narrator",
+      "text": "問題不等人，AI 學習也不必等。",
+      "action": "logo",
+      "ui": "logo",
+      "focus": "room",
+      "beat": 3.0,
+      "shotCycle": [
+        { "type": "logo", "focus": "room" },
+        { "type": "logo", "focus": "room" }
+      ]
+    }
+  ]
+}

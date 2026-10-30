@@ -44,7 +44,7 @@ export async function normalizeToLufs(inWav, outWav, { target = -14, duration })
     "-i",
     inWav,
     "-af",
-    "acompressor=threshold=-18dB:ratio=2.2:attack=8:release=140:makeup=1,alimiter=limit=0.89:attack=5:release=50",
+    "acompressor=threshold=-20dB:ratio=4:attack=5:release=100:makeup=3,alimiter=limit=0.89:attack=5:release=50",
     "-ar",
     "48000",
     "-ac",

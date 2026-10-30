@@ -4,12 +4,13 @@ import { fileURLToPath } from "node:url";
 import { prepareEpisode } from "./prepare.mjs";
 import { assertShotCoverage } from "./shot-planner.mjs";
 import { evaluate, sampleEnvelope } from "./playback.mjs";
+import { evaluate as evaluateStudy } from "./study-playback.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const script = JSON.parse(
   fs.readFileSync(path.join(root, "scripts/cube-pets-demo.json"), "utf8"),
 );
-const { bundle, audio, clips } = prepareEpisode(script);
+const { bundle, audio, clips } = await prepareEpisode(script);
 
 function assert(cond, message) {
   if (!cond) throw new Error(message);
@@ -75,6 +76,25 @@ const silent = bundle.lines.some((line, index) => {
   return next.start < line.start + line.soundDuration - 1e-3;
 });
 assert(!silent, "音效不應重疊");
+
+const studyScript = JSON.parse(
+  fs.readFileSync(path.join(root, "scripts/ai-tutor-ad.json"), "utf8"),
+);
+const study = await prepareEpisode(studyScript);
+assert(Math.abs(study.bundle.duration - 30) < 0.05, `助教片長應約 30 秒，實際 ${study.bundle.duration}`);
+assert(study.bundle.scene === "study", "助教片場景應為 study");
+assert(study.bundle.brand?.name === "AI 學習平台", "品牌名稱應來自腳本");
+assertShotCoverage(study.bundle.shots, study.bundle.duration);
+assert(study.bundle.shots.some((shot) => shot.type === "logo"), "結尾應有 logo 鏡");
+const spoken = study.bundle.lines.find((line) => line.words?.length);
+const midWord = spoken.words[Math.floor(spoken.words.length / 2)];
+const talkAt = spoken.start + (midWord.start + midWord.end) / 2;
+const talking = evaluateStudy(study.bundle, talkAt);
+assert(talking.poses.student.mouth > 0.2, `說話中嘴型應張開 ${talking.poses.student.mouth}`);
+assert(/[\u4e00-\u9fff]/.test(talking.caption?.text ?? ""), "字幕應有繁體中文");
+assert(talking.overlay == null, "台詞中不該蓋上結尾 logo");
+const logoFrame = evaluateStudy(study.bundle, study.bundle.duration - 0.4);
+assert(logoFrame.overlay?.name === "AI 學習平台", "結尾應畫出品牌名稱");
 
 console.log("self-check ok");
 console.log(

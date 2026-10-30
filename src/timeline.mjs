@@ -48,5 +48,8 @@ export function buildTimeline(script) {
     endOfLines,
     duration,
     finale: script.finale ?? null,
+    planner: script.planner ?? "lines",
+    scene: script.scene ?? null,
+    brand: script.brand ?? null,
   };
 }

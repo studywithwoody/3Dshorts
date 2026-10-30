@@ -1,0 +1,55 @@
+{
+  "text": "這題我已經算半小時了！",
+  "voice": "zh-TW-YunJheNeural",
+  "rate": "+0%",
+  "provider": "edge",
+  "words": [
+    {
+      "text": "這",
+      "start": 0.1,
+      "end": 0.3125
+    },
+    {
+      "text": "題",
+      "start": 0.3125,
+      "end": 0.475
+    },
+    {
+      "text": "我",
+      "start": 0.475,
+      "end": 0.6375
+    },
+    {
+      "text": "已經",
+      "start": 0.6375,
+      "end": 0.8875
+    },
+    {
+      "text": "算",
+      "start": 0.8875,
+      "end": 1.05
+    },
+    {
+      "text": "半",
+      "start": 1.05,
+      "end": 1.175
+    },
+    {
+      "text": "小時",
+      "start": 1.175,
+      "end": 1.4625
+    },
+    {
+      "text": "了",
+      "start": 1.4625,
+      "end": 1.9
+    }
+  ],
+  "sentences": [
+    {
+      "text": "這題我已經算半小時了",
+      "start": 0.1,
+      "end": 1.9
+    }
+  ]
+}

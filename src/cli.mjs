@@ -61,7 +61,7 @@ async function main() {
 
   const scriptPath = path.resolve(opts.script);
   const script = JSON.parse(fs.readFileSync(scriptPath, "utf8"));
-  const { bundle, audio } = prepareEpisode(script);
+  const { bundle, audio } = await prepareEpisode(script);
   assertShotCoverage(bundle.shots, bundle.duration);
   printShots(bundle.shots);
 

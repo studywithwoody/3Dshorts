@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { evaluate } from "/src/playback.mjs";
+import { evaluate as evaluatePets } from "/src/playback.mjs";
+import { evaluate as evaluateStudy } from "/src/study-playback.mjs";
+import { buildStudy } from "/src/stage/study-set.js";
 
 const params = new URLSearchParams(location.search);
 const defaultFormat = params.get("format") === "png" ? "image/png" : "image/jpeg";
@@ -28,12 +30,14 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NoToneMapping;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.setClearColor(0x8ecaf0, 1);
+const isStudy = bundle.scene === "study";
+const evaluate = isStudy ? evaluateStudy : evaluatePets;
+renderer.setClearColor(isStudy ? 0x10141c : 0x8ecaf0, 1);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(50, width / height, 0.05, 80);
 
-buildSet(scene);
+if (!isStudy) buildSet(scene);
 
 const capture = document.createElement("canvas");
 capture.width = width;
@@ -41,6 +45,7 @@ capture.height = height;
 const ctx = capture.getContext("2d", { alpha: false });
 
 let current = null;
+let study = null;
 const pets = [];
 
 function buildSet(scene) {
@@ -305,33 +310,99 @@ class Pet {
   }
 }
 
+function wrapText(text, maxWidth) {
+  const lines = [];
+  let current = "";
+  for (const ch of text) {
+    const next = current + ch;
+    if (current && ctx.measureText(next).width > maxWidth) {
+      lines.push(current);
+      current = ch;
+    } else current = next;
+  }
+  if (current) lines.push(current);
+  return lines.length ? lines : [""];
+}
+
 function drawCaption(caption) {
-  if (!caption) return;
+  if (!caption?.text) return;
+  const family = caption.family || "Nunito";
+  const size = caption.size || 118;
+  const maxWidth = caption.maxWidth || width * 0.86;
   ctx.save();
-  ctx.translate(width / 2, Math.round(height * 0.86));
-  ctx.scale(caption.pop, caption.pop);
-  ctx.font = "800 118px Nunito, sans-serif";
+  ctx.font = `700 ${size}px "${family}", sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
   ctx.miterLimit = 2;
-  ctx.lineWidth = 22;
-  ctx.strokeStyle = "rgba(48, 32, 18, 0.78)";
-  ctx.strokeText(caption.text, 0, 0);
+  const lines = wrapText(caption.text, maxWidth);
+  const y0 = Math.round(height * (caption.y ?? 0.86));
+  const gap = Math.round(size * 1.18);
+  const pop = caption.pop || 1;
+  ctx.translate(width / 2, y0);
+  ctx.scale(pop, pop);
+  ctx.lineWidth = Math.max(10, Math.round(size * 0.16));
+  ctx.strokeStyle = "rgba(12, 16, 24, 0.82)";
   ctx.fillStyle = "#ffffff";
-  ctx.fillText(caption.text, 0, 0);
+  lines.forEach((line, index) => {
+    const y = (index - (lines.length - 1) / 2) * gap;
+    ctx.strokeText(line, 0, y);
+    ctx.fillText(line, 0, y);
+  });
+  ctx.restore();
+}
+
+function drawLogo(overlay) {
+  if (!overlay || overlay.kind !== "logo") return;
+  ctx.save();
+  ctx.fillStyle = "rgba(6, 8, 16, 0.78)";
+  ctx.fillRect(0, 0, width, height);
+  const color = overlay.color || "#F6C453";
+  const cx = width / 2;
+  const cy = Math.round(height * 0.4);
+  ctx.beginPath();
+  ctx.arc(cx, cy, 118, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.fillStyle = "#1a140c";
+  ctx.beginPath();
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 - Math.PI / 2;
+    ctx.lineTo(Math.cos(a) * 78, Math.sin(a) * 78);
+    const b = a + Math.PI / 4;
+    ctx.lineTo(Math.cos(b) * 22, Math.sin(b) * 22);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  let size = 92;
+  const name = overlay.name || "AI 學習平台";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#f7fbff";
+  do {
+    ctx.font = `700 ${size}px "Noto Sans TC", sans-serif`;
+    size -= 4;
+  } while (size > 48 && ctx.measureText(name).width > 920);
+  ctx.fillText(name, cx, cy + 210);
   ctx.restore();
 }
 
 function applyFrame(t) {
   current = evaluate(bundle, t);
-  for (const pet of pets) pet.apply(current.poses[pet.id]);
-  const ball = scene.userData.ball;
-  ball.position.set(current.ball.position[0], current.ball.position[1], current.ball.position[2]);
-  ball.scale.set(current.ball.scale[0], current.ball.scale[1], current.ball.scale[2]);
-  scene.userData.flowers.forEach((flower, i) => {
-    flower.rotation.z = Math.sin(t * 1.6 + i) * 0.08;
-  });
+  if (study) {
+    study.apply(current);
+  } else {
+    for (const pet of pets) pet.apply(current.poses[pet.id]);
+    const ball = scene.userData.ball;
+    ball.position.set(current.ball.position[0], current.ball.position[1], current.ball.position[2]);
+    ball.scale.set(current.ball.scale[0], current.ball.scale[1], current.ball.scale[2]);
+    scene.userData.flowers.forEach((flower, i) => {
+      flower.rotation.z = Math.sin(t * 1.6 + i) * 0.08;
+    });
+  }
   camera.fov = current.camera.fov;
   camera.updateProjectionMatrix();
   camera.position.set(
@@ -355,31 +426,42 @@ window.__capture = (fmt) => {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, width, height);
   ctx.drawImage(renderer.domElement, 0, 0, width, height);
+  drawLogo(current?.overlay);
   drawCaption(current?.caption);
   const format = fmt || defaultFormat;
   if (format === "image/png") return capture.toDataURL("image/png");
   return capture.toDataURL("image/jpeg", defaultQuality);
 };
 
-const font = new FontFace("Nunito", "url(/assets/fonts/Nunito.ttf)", {
-  weight: "200 1000",
-  style: "normal",
-});
+const font = isStudy
+  ? new FontFace("Noto Sans TC", "url(/assets/fonts/NotoSansTC-700.ttf)", {
+      weight: "700",
+      style: "normal",
+    })
+  : new FontFace("Nunito", "url(/assets/fonts/Nunito.ttf)", {
+      weight: "200 1000",
+      style: "normal",
+    });
 document.fonts.add(font);
 
 try {
   await font.load();
-  await document.fonts.load("800 118px Nunito");
-  const loader = new GLTFLoader();
-  for (const spec of bundle.characters) {
-    const url = spec.model.startsWith("/") ? spec.model : `/${spec.model}`;
-    const gltf = await loader.loadAsync(url);
-    const pet = new Pet(spec, gltf);
-    scene.add(pet.pivot);
-    scene.add(pet.shadow);
-    pets.push(pet);
+  if (isStudy) {
+    await document.fonts.load('700 64px "Noto Sans TC"');
+    study = await buildStudy(scene, bundle);
+  } else {
+    await document.fonts.load("800 118px Nunito");
+    const loader = new GLTFLoader();
+    for (const spec of bundle.characters) {
+      const url = spec.model.startsWith("/") ? spec.model : `/${spec.model}`;
+      const gltf = await loader.loadAsync(url);
+      const pet = new Pet(spec, gltf);
+      scene.add(pet.pivot);
+      scene.add(pet.shadow);
+      pets.push(pet);
+    }
+    window.__pets = pets;
   }
-  window.__pets = pets;
   applyFrame(0);
   window.__READY = true;
   console.log(

@@ -12,6 +12,8 @@ const LIBRARY = {
   meow: synthMeow,
   cheep: synthCheep,
   oink: synthOink,
+  ping: synthPing,
+  slam: synthSlam,
 };
 
 export function listSounds() {
@@ -122,6 +124,42 @@ function synthOink(sr) {
   return { samples: lowpass(out, 1800, sr) };
 }
 
+function synthPing(sr) {
+  const dur = 0.42;
+  const n = Math.floor(sr * dur);
+  const out = new Float32Array(n);
+  const notes = [
+    { t: 0.01, f: 1046.5, d: 0.16 },
+    { t: 0.14, f: 1568, d: 0.2 },
+  ];
+  for (const note of notes) {
+    let phase = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / sr - note.t;
+      if (t < 0 || t > note.d) continue;
+      phase += (2 * Math.PI * note.f) / sr;
+      const env = Math.sin(Math.PI * Math.min(1, t / note.d)) ** 0.55 * Math.exp(-t * 6.5);
+      out[i] += (Math.sin(phase) + Math.sin(phase * 2) * 0.16) * env;
+    }
+  }
+  return { samples: out };
+}
+
+function synthSlam(sr) {
+  const dur = 0.48;
+  const n = Math.floor(sr * dur);
+  const noise = lowpass(makeNoise(n, 0x51a1), 900, sr);
+  const out = new Float32Array(n);
+  let phase = 0;
+  for (let i = 0; i < n; i++) {
+    const t = i / sr;
+    phase += (2 * Math.PI * (130 * Math.exp(-t * 8) + 48)) / sr;
+    const env = Math.exp(-t * 8.5) * (1 - Math.exp(-t * 90));
+    out[i] = (Math.sin(phase) * 0.95 + noise[i] * 0.8) * env;
+  }
+  return { samples: lowpass(out, 2400, sr) };
+}
+
 function synthMusic(sr, duration) {
   const n = Math.floor(sr * duration);
   const out = new Float32Array(n);
@@ -144,26 +182,68 @@ function synthMusic(sr, duration) {
   return out;
 }
 
+function synthNight(sr, duration) {
+  const n = Math.floor(sr * duration);
+  const out = new Float32Array(n);
+  let droneA = 0;
+  let droneB = 0;
+  for (let i = 0; i < n; i++) {
+    droneA += (2 * Math.PI * 110) / sr;
+    droneB += (2 * Math.PI * 164.81) / sr;
+    const trem = 0.86 + 0.14 * Math.sin((2 * Math.PI * 0.07 * i) / sr);
+    out[i] += (Math.sin(droneA) * 0.2 + Math.sin(droneB) * 0.1) * trem;
+  }
+  const scale = [220, 261.63, 293.66, 329.63, 392, 329.63, 293.66, 246.94];
+  const step = 0.8;
+  const notes = Math.ceil(duration / step);
+  for (let k = 0; k < notes; k++) {
+    const f = scale[k % scale.length];
+    const start = Math.floor(k * step * sr);
+    const len = Math.floor(0.72 * sr);
+    let phase = 0;
+    for (let i = 0; i < len && start + i < n; i++) {
+      const t = i / sr;
+      phase += (2 * Math.PI * f) / sr;
+      const env = Math.exp(-t * 2.3) * (1 - Math.exp(-t * 16));
+      out[start + i] += (Math.sin(phase) * 0.34 + Math.sin(phase * 2) * 0.08) * env;
+    }
+  }
+  return out;
+}
+
 /**
  * Mix placed calls over a ducked music bed. Returns a Float32Array of `duration` seconds.
+ * `bed: "night"` is the study-room loop. Animal calls keep the original day bed.
  */
-export function mixEpisode({ clips, lines, duration, sampleRate = SAMPLE_RATE }) {
+export function mixEpisode({ clips, lines, duration, sampleRate = SAMPLE_RATE, bed = "day" }) {
   const n = Math.floor(sampleRate * duration);
   const sfx = new Float32Array(n);
   const activity = new Float32Array(n);
 
   for (const line of lines) {
-    const clip = clips[line.sound];
-    if (!clip) continue;
-    const offset = Math.floor(line.start * sampleRate);
-    const samples = clip.samples;
-    for (let i = 0; i < samples.length && offset + i < n; i++) {
-      sfx[offset + i] += samples[i];
-      activity[offset + i] = 1;
+    const key = line.audioKey || line.sound;
+    const clip = key ? clips[key] : null;
+    if (clip) {
+      const offset = Math.floor(line.start * sampleRate);
+      const samples = clip.samples;
+      for (let i = 0; i < samples.length && offset + i < n; i++) {
+        sfx[offset + i] += samples[i];
+        activity[offset + i] = 1;
+      }
+    }
+    if (line.sfx && clips[line.sfx]) {
+      const fx = clips[line.sfx];
+      const offset = Math.floor((line.start + (line.sfxDelay || 0)) * sampleRate);
+      const gain = line.sfxGain ?? 0.8;
+      const samples = fx.samples;
+      for (let i = 0; i < samples.length && offset + i < n; i++) {
+        sfx[offset + i] += samples[i] * gain;
+      }
     }
   }
 
-  const music = synthMusic(sampleRate, duration);
+  const music = bed === "night" ? synthNight(sampleRate, duration) : synthMusic(sampleRate, duration);
+  const musicBase = bed === "night" ? 0.2 : 0.16;
   const mix = new Float32Array(n);
   let env = 0;
   for (let i = 0; i < n; i++) {
@@ -172,7 +252,7 @@ export function mixEpisode({ clips, lines, duration, sampleRate = SAMPLE_RATE })
     env += (target - env) * coeff;
     const fadeIn = Math.min(1, i / (0.3 * sampleRate));
     const fadeOut = Math.min(1, (n - i) / (0.45 * sampleRate));
-    const musicGain = 0.16 * (1 - 0.78 * env) * fadeIn * fadeOut;
+    const musicGain = musicBase * (1 - 0.78 * env) * fadeIn * fadeOut;
     mix[i] = sfx[i] * 0.92 + music[i] * musicGain;
   }
 
@@ -206,6 +286,10 @@ export function encodeWav(samples, sampleRate) {
     buf.writeInt16LE((v * 32767) | 0, 44 + i * 2);
   }
   return buf;
+}
+
+export function envelopeFromSamples(samples, sampleRate) {
+  return envelopeOf(samples, sampleRate);
 }
 
 function envelopeOf(samples, sampleRate) {
