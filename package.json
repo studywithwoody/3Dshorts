@@ -1,0 +1,19 @@
+{
+  "name": "3dshorts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Script-to-video 3D shorts engine (three.js + headless Chrome + ffmpeg)",
+  "type": "module",
+  "scripts": {
+    "render": "node src/cli.mjs",
+    "test": "node src/self-check.mjs",
+    "setup-assets": "node src/setup-assets.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "puppeteer-core": "^25.16.0",
+    "three": "^0.187.0"
+  }
+}

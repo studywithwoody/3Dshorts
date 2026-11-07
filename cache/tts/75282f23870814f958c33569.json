@@ -1,0 +1,55 @@
+{
+  "text": "問題不等人，AI 學習也不必等。",
+  "voice": "zh-TW-HsiaoYuNeural",
+  "rate": "+0%",
+  "provider": "edge",
+  "words": [
+    {
+      "text": "問題",
+      "start": 0.1,
+      "end": 0.5
+    },
+    {
+      "text": "不等",
+      "start": 0.55,
+      "end": 0.875
+    },
+    {
+      "text": "人",
+      "start": 0.925,
+      "end": 1.1125
+    },
+    {
+      "text": "AI",
+      "start": 1.4875,
+      "end": 1.8
+    },
+    {
+      "text": "學習",
+      "start": 1.8375,
+      "end": 2.3875
+    },
+    {
+      "text": "也",
+      "start": 2.5625,
+      "end": 2.7625
+    },
+    {
+      "text": "不必",
+      "start": 2.8,
+      "end": 3.0875
+    },
+    {
+      "text": "等",
+      "start": 3.2125,
+      "end": 3.375
+    }
+  ],
+  "sentences": [
+    {
+      "text": "問題不等人AI學習也不必等",
+      "start": 0.1,
+      "end": 3.375
+    }
+  ]
+}

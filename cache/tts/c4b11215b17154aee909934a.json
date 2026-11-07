@@ -1,0 +1,30 @@
+{
+  "text": "我會了！！",
+  "voice": "zh-TW-YunJheNeural",
+  "rate": "+6%",
+  "provider": "edge",
+  "words": [
+    {
+      "text": "我",
+      "start": 0.1,
+      "end": 0.2769
+    },
+    {
+      "text": "會",
+      "start": 0.2769,
+      "end": 0.4655
+    },
+    {
+      "text": "了",
+      "start": 0.4656,
+      "end": 0.8665
+    }
+  ],
+  "sentences": [
+    {
+      "text": "我會了",
+      "start": 0.1,
+      "end": 0.8665
+    }
+  ]
+}
